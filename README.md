@@ -141,6 +141,10 @@ All settings live under the `timesheet.*` prefix (`application.yaml`):
 | `schedule` | `0 0 9 ? * FRI#1,FRI#3 *` | Quartz cron used by the resident profile |
 | `recipient` / `sender` / `subject` | — | Mail envelope and subject |
 
+## License
+
+[MIT](LICENSE).
+
 ## Tests
 
 ```bash
