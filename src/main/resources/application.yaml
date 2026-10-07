@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: camel-timesheet-mailer
+  profiles:
+    # The default shape is a resident process driven by an in-app cron scheduler.
+    active: resident
+
+server:
+  port: 8080
+
+camel:
+  springboot:
+    # Keep the JVM alive while the cron scheduler waits for the next trigger.
+    main-run-controller: true
+  main:
+    # Fail the run loudly if a route cannot start, rather than silently idling.
+    auto-configuration-fail-fast: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+timesheet:
+  # Length of the reporting window; 14 = biweekly.
+  period-days: 14
+  # Contracted hours per working day.
+  hours-per-day: 7
+  # ISO 3166-2 subdivision code for regional holidays (on = Ontario).
+  province: on
+  # Where the workbook template lives. Created on first start if missing.
+  template-path: data/timesheet-template.xlsx
+  # Durable audit copy of every workbook that is produced.
+  outbox-dir: data/outbox
+  # Where failed runs leave a diagnostic report.
+  dead-letter-dir: data/deadletter
+  # 09:00 on the 1st and 3rd Friday of each month.
+  schedule: "0 0 9 ? * FRI#1,FRI#3 *"
+  # Delay before the run-once trigger fires, to let the context finish starting.
+  startup-delay: 3000
+  recipient: ${TIMESHEET_RECIPIENT:me@example.com}
+  sender: ${TIMESHEET_SENDER:me@example.com}
+  subject: ${TIMESHEET_SUBJECT:Biweekly timesheet}
+
+mail:
+  host: ${MAIL_HOST:smtp.gmail.com}
+  port: ${MAIL_PORT:587}
+  username: ${MAIL_USERNAME:}
+  password: ${MAIL_PASSWORD:}
+
+logging:
+  level:
+    com.daniel.timesheet: INFO
+    org.apache.camel.component.mail: WARN

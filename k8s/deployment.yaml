@@ -1,0 +1,66 @@
+# Resident shape: one always-on pod. The in-app cron scheduler (camel-cron backed by
+# CamelSpringCronService) fires the route on the configured schedule and the process
+# idles in between. Choose this when you want the job to live next to the cluster and
+# expose health/metrics.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: camel-timesheet-mailer
+  labels:
+    app: camel-timesheet-mailer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: camel-timesheet-mailer
+  template:
+    metadata:
+      labels:
+        app: camel-timesheet-mailer
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/daniel/camel-timesheet-mailer:latest
+          imagePullPolicy: IfNotPresent
+          args: ["--spring.profiles.active=resident"]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: timesheet-mail-secrets
+          env:
+            - name: TIMESHEET_RECIPIENT
+              value: "me@example.com"
+            - name: TIMESHEET_SENDER
+              value: "me@example.com"
+            - name: TIMESHEET_SUBJECT
+              value: "Biweekly timesheet"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: camel-timesheet-mailer-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: camel-timesheet-mailer-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

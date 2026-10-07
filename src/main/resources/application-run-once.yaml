@@ -1,0 +1,16 @@
+# Run-once shape: a Kubernetes CronJob starts the pod, one exchange is fired by the
+# timer: consumer in TimesheetRoute, and Camel then shuts the application down so the
+# container exits by itself.
+camel:
+  springboot:
+    # No reason to keep the JVM alive; exit as soon as work is done.
+    main-run-controller: false
+  main:
+    # Belt-and-braces upper bound in case the route stalls: never run longer than 5 min.
+    duration-max-seconds: 300
+    # ...but exit as soon as the timer's single exchange (and any retries) completes.
+    duration-max-messages: 1
+
+logging:
+  level:
+    com.daniel.timesheet: INFO

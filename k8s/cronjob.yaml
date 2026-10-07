@@ -1,0 +1,44 @@
+# Run-once shape: Kubernetes owns the schedule and starts a short-lived pod for each
+# run. The app fires a single exchange (timer consumer), sends the mail, and exits.
+# Cron syntax here is Kubernetes' native five-field form, not the Quartz form used by
+# the resident profile's in-app scheduler.
+#
+# "0 9 1-7,15-21 * 5" = 09:00 on every Friday that falls on the 1st-7th or 15th-21st,
+# i.e. the first and third Fridays of the month.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: camel-timesheet-mailer
+  labels:
+    app: camel-timesheet-mailer
+spec:
+  schedule: "0 9 1-7,15-21 * 5"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: camel-timesheet-mailer
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: app
+              image: ghcr.io/daniel/camel-timesheet-mailer:latest
+              imagePullPolicy: IfNotPresent
+              args: ["--spring.profiles.active=run-once"]
+              envFrom:
+                - secretRef:
+                    name: timesheet-mail-secrets
+              env:
+                - name: TIMESHEET_RECIPIENT
+                  value: "me@example.com"
+                - name: TIMESHEET_SENDER
+                  value: "me@example.com"
+              resources:
+                requests: { cpu: "100m", memory: "256Mi" }
+                limits: { cpu: "500m", memory: "512Mi" }

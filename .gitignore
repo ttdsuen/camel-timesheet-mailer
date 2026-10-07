@@ -1,0 +1,16 @@
+target/
+data/
+*.log
+
+# Local secrets
+.env
+*-secret.yaml
+secret.yaml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

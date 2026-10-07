@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.daniel</groupId>
+  <artifactId>camel-timesheet-mailer</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>camel-timesheet-mailer</name>
+  <description>Biweekly timesheet generator and mailer built with Apache Camel</description>
+
+  <properties>
+    <java.version>25</java.version>
+    <camel.version>4.22.1</camel.version>
+    <jxls.version>3.2.0</jxls.version>
+    <jollyday.version>2.21.0</jollyday.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Import the Camel BOM before Spring Boot so Camel's tested JAR set wins. -->
+      <dependency>
+        <groupId>org.apache.camel.springboot</groupId>
+        <artifactId>camel-spring-boot-bom</artifactId>
+        <version>${camel.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Camel runtime. -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-spring-boot-starter</artifactId>
+    </dependency>
+    <!-- camel-spring supplies CamelSpringCronService, the CamelCronService implementation
+         that backs the cron: endpoint used by the resident profile. -->
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-spring</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+    <!-- camel-file is used for the outbox/dead-letter legs; camel-timer (a consumers-only
+         starter already pulled in above) drives the one-shot trigger of the run-once profile. -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-file-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-mail-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-micrometer-starter</artifactId>
+    </dependency>
+
+    <!-- Excel templating (jXLS over Apache POI). -->
+    <dependency>
+      <groupId>org.jxls</groupId>
+      <artifactId>jxls-poi</artifactId>
+      <version>${jxls.version}</version>
+    </dependency>
+
+    <!-- Public-holiday calculation (Canada + Ontario subdivisions). -->
+    <dependency>
+      <groupId>de.focus-shift</groupId>
+      <artifactId>jollyday-core</artifactId>
+      <version>${jollyday.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>de.focus-shift</groupId>
+      <artifactId>jollyday-jackson</artifactId>
+      <version>${jollyday.version}</version>
+    </dependency>
+
+    <!-- Actuator + Prometheus for cluster observability. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+    <!-- Tests. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Plain Camel test support: builds a CamelContext directly, no Spring container. -->
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-test-junit6</artifactId>
+      <version>${camel.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
