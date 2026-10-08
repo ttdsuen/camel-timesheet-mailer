@@ -43,12 +43,19 @@
       <groupId>org.apache.camel.springboot</groupId>
       <artifactId>camel-spring-boot-starter</artifactId>
     </dependency>
-    <!-- camel-spring supplies CamelSpringCronService, the CamelCronService implementation
-         that backs the cron: endpoint used by the resident profile. -->
+    <!-- camel-spring supplies CamelSpringCronService, the CamelCronService SPI implementation
+         that cron: delegates to. -->
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-spring</artifactId>
       <version>${camel.version}</version>
+    </dependency>
+    <!-- The cron: component itself lives in camel-cron; without it the resident profile
+         fails at startup with "No endpoint could be found for: cron://timesheet".
+         camel-spring alone is NOT sufficient. -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-cron-starter</artifactId>
     </dependency>
     <!-- camel-file is used for the outbox/dead-letter legs; camel-timer (a consumers-only
          starter already pulled in above) drives the one-shot trigger of the run-once profile. -->
