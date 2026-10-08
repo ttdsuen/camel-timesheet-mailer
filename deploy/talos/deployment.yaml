@@ -38,7 +38,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          image: gitea.home.net/daniel/camel-timesheet-mailer:c8b386c
+          image: gitea.home.net/daniel/camel-timesheet-mailer:e7b9976
           imagePullPolicy: IfNotPresent
           args: ["--spring.profiles.active=resident"]
           ports:
