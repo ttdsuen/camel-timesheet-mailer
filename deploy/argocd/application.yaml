@@ -1,0 +1,46 @@
+# ArgoCD Application for the timesheet mailer.
+#
+# This file is applied by hand (it is the bootstrap object); everything below it comes
+# from the Git repository. Applied with:
+#
+#   kubectl apply -f deploy/argocd/application.yaml
+#
+# Source is the PUBLIC GitHub mirror (https://github.com/ttdsuen/camel-timesheet-mailer),
+# so ArgoCD needs no repository credential — the cluster already has outbound HTTPS.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: camel-timesheet-mailer
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: camel-timesheet-mailer
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ttdsuen/camel-timesheet-mailer.git
+    targetRevision: main
+    # Directory (rather than Kustomize/Helm): plain manifests already namespaced.
+    path: deploy/talos
+    directory:
+      recurse: false
+  destination:
+    # In-cluster API server.
+    server: https://kubernetes.default.svc
+    namespace: timesheet-mailer
+  syncPolicy:
+    automated:
+      # The image tag is pinned, so drift is a real change: let ArgoCD correct it.
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # The Application itself creates the timesheet-mailer namespace (namespace.yaml),
+      # so ArgoCD must be willing to apply a resource in a not-yet-existing namespace.
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

@@ -126,6 +126,42 @@ docker build -t ghcr.io/<you>/camel-timesheet-mailer:latest .
 docker push ghcr.io/<you>/camel-timesheet-mailer:latest
 ```
 
+## Deploying to Talos via ArgoCD
+
+The `deploy/` directory is the GitOps-ready, cluster-specific shape used on the home
+Talos cluster, where everything is pulled from Git rather than applied by hand:
+
+- `deploy/talos/` — the synced manifests (Namespace, PVC, Deployment, Service)
+- `deploy/argocd/application.yaml` — the ArgoCD `Application` that points at `deploy/talos`
+
+It differs from the generic `k8s/` manifests in three cluster-specific ways: the image
+comes from the private Gitea registry (`gitea.home.net/daniel/camel-timesheet-mailer`),
+the pod uses `imagePullSecrets: gitea-regcred`, and it runs hardened as non-root uid 1001
+with a read-only root filesystem.
+
+Two secrets are created **out-of-band** so no credential is ever committed:
+
+```bash
+# 1. Pull credential for the private Gitea registry
+kubectl -n timesheet-mailer create secret docker-registry gitea-regcred \
+  --docker-server=gitea.home.net \
+  --docker-username="$REGISTRY_USERNAME" \
+  --docker-password="$REGISTRY_PASSWORD"
+
+# 2. SMTP credentials (copy deploy/talos/secret.example.yaml to a private file first)
+kubectl -n timesheet-mailer apply -f secret.yaml
+```
+
+Then register the application with ArgoCD (the source is the public GitHub repo, so no
+repository credential is needed):
+
+```bash
+kubectl apply -f deploy/argocd/application.yaml
+argocd app get camel-timesheet-mailer          # or: kubectl -n argocd get application
+```
+
+See `deploy/talos/README.md` for the full build-push-deploy walkthrough.
+
 ## Configuration reference
 
 All settings live under the `timesheet.*` prefix (`application.yaml`):

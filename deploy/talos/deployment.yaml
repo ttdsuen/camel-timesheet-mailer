@@ -1,0 +1,103 @@
+# Resident shape: one always-on pod. The in-app cron scheduler (camel-spring's
+# CamelSpringCronService) fires the route on timesheet.schedule and the JVM idles in
+# between, exposing actuator health + Prometheus metrics on 8080.
+#
+# `Recreate` is deliberate: the data volume is ReadWriteOnce, so a rolling update would
+# briefly need two pods on the same volume. And because only one run may be in flight at a
+# time, never running two pods is the behaviour we want anyway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: camel-timesheet-mailer
+  namespace: timesheet-mailer
+  labels:
+    app.kubernetes.io/name: camel-timesheet-mailer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: camel-timesheet-mailer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: camel-timesheet-mailer
+    spec:
+      # The Gitea registry is private; this pull secret is created out-of-band (see
+      # secret.example.yaml) rather than committed, so no credential ever lands in git.
+      imagePullSecrets:
+        - name: gitea-regcred
+      securityContext:
+        runAsNonRoot: true
+        # `appuser` created by the Dockerfile.
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: gitea.home.net/daniel/camel-timesheet-mailer:c8b386c
+          imagePullPolicy: IfNotPresent
+          args: ["--spring.profiles.active=resident"]
+          ports:
+            - name: http
+              containerPort: 8080
+          # MAIL_HOST / MAIL_PORT / MAIL_USERNAME / MAIL_PASSWORD, created out-of-band.
+          envFrom:
+            - secretRef:
+                name: timesheet-mail-secrets
+          env:
+            # Edit these to the real envelope addresses for the deployment.
+            - name: TIMESHEET_RECIPIENT
+              value: "you@example.com"
+            - name: TIMESHEET_SENDER
+              value: "you@example.com"
+            - name: TIMESHEET_SUBJECT
+              value: "Biweekly timesheet"
+            # Quartz-style cron: 09:00 on the first and third Friday of each month.
+            - name: TIMESHEET_SCHEDULE
+              value: "0 0 9 ? * FRI#1,FRI#3 *"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            # No CPU limit: the job is bursty and throttling it only slows a run down.
+            # -XX:MaxRAMPercentage=75 keeps the heap inside this ceiling.
+            limits:
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            # Template, outbox (audit copies) and dead-letter reports all live here.
+            - name: data
+              mountPath: /app/data
+            # Tomcat/Spring need a writable temp dir; the root filesystem is read-only.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: camel-timesheet-mailer-data
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+      terminationGracePeriodSeconds: 30

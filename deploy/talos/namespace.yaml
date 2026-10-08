@@ -1,0 +1,8 @@
+# Keeping the Namespace in the synced directory makes the Application self-contained:
+# ArgoCD creates it before the namespaced resources that live in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: timesheet-mailer
+  labels:
+    app.kubernetes.io/name: camel-timesheet-mailer

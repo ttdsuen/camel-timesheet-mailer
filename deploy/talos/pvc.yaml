@@ -1,0 +1,17 @@
+# Durable state for the job: the generated template, the outbox of audit copies, and
+# any dead-letter reports. The cluster's default StorageClass is `local-path`
+# (rancher.io/local-path); it is named explicitly here for clarity.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: camel-timesheet-mailer-data
+  namespace: timesheet-mailer
+  labels:
+    app.kubernetes.io/name: camel-timesheet-mailer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

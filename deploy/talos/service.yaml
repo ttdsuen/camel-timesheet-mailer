@@ -1,0 +1,19 @@
+# ClusterIP service for in-cluster access to the actuator endpoints (health, metrics):
+#   kubectl -n timesheet-mailer port-forward svc/camel-timesheet-mailer 8080:8080
+#   curl localhost:8080/actuator/health
+# The app has no browser UI, so it is intentionally not exposed as a LoadBalancer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: camel-timesheet-mailer
+  namespace: timesheet-mailer
+  labels:
+    app.kubernetes.io/name: camel-timesheet-mailer
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: camel-timesheet-mailer
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
